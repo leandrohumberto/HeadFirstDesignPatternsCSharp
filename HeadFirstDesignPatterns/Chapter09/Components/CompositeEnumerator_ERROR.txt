@@ -1,0 +1,77 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace Chapter09.Components
+{
+    public class CompositeEnumerator : IEnumerator
+    {
+        private readonly Stack<IEnumerator> _stack = new Stack<IEnumerator>();
+        private readonly IEnumerator _firstEnumerator;
+        private object _current;
+        private bool _started;
+
+        public CompositeEnumerator(IEnumerator enumerator)
+        {
+            _stack.Push(enumerator);
+            _firstEnumerator = enumerator;
+        }
+
+        public object Current
+        {
+            get
+            {
+                if (!_started)
+                {
+                    throw new InvalidOperationException("Enumeration has not started. Call MoveNext.");
+                }
+
+                return _current;
+            }
+
+            private set
+            {
+                _current = value;
+            }
+        }
+
+        public bool MoveNext()
+        {
+
+            if (_stack.Count <= 0)
+            {
+                _started = true;
+                return false;
+            }
+            else
+            {
+                IEnumerator enumerator = _stack.Peek() as IEnumerator;
+
+                if (!enumerator.MoveNext())
+                {
+                    _stack.Pop();
+                    return MoveNext();
+                }
+                else
+                {
+                    MenuComponent component = (MenuComponent)enumerator.Current;
+
+                    if (component is Menu)
+                    {
+                        _stack.Push(component.GetEnumerator());
+                    }
+
+                    _current = component;
+                    _started = true;
+                    return true;
+                }
+            }
+        }
+
+        public void Reset()
+        {
+            _stack.Clear();
+            _stack.Push(_firstEnumerator);
+        }
+    }
+}
